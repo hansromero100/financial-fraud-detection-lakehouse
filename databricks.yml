@@ -1,0 +1,120 @@
+bundle:
+  name: financial-fraud-detection-lakehouse
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dev-XXXXXXXXX.cloud.databricks.com
+      root_path: /Workspace/Users/${user_name}/fraud-detection-lakehouse
+    run_as:
+      user_name: ${user_name}
+    variables:
+      catalog: fraud_detection_dev
+      source_path: /tmp/paysim_landing
+      checkpoint_root: /tmp/checkpoints/fraud-detection
+    compute:
+      cluster_id: ${dev_cluster_id}
+    git:
+      source: /Workspace/Users/${user_name}/fraud-detection-lakehouse
+
+  staging:
+    mode: development
+    workspace:
+      host: https://staging-XXXXXXXXX.cloud.databricks.com
+      root_path: /Workspace/Users/${user_name}/fraud-detection-lakehouse-staging
+    run_as:
+      user_name: ${user_name}
+    variables:
+      catalog: fraud_detection_staging
+      source_path: abfss://raw-landing@storageaccount.dfs.core.windows.net/paysim
+      checkpoint_root: abfss://checkpoints@storageaccount.dfs.core.windows.net/fraud-detection-staging
+    compute:
+      cluster_id: ${staging_cluster_id}
+
+  prod:
+    mode: production
+    workspace:
+      host: https://prod-XXXXXXXXX.cloud.databricks.com
+      root_path: /Workspace/reshared/fraud-detection-lakehouse
+    run_as:
+      service_principal_name: ${prod_sp_name}
+    variables:
+      catalog: fraud_detection_prod
+      source_path: abfss://raw-landing@storageaccount.dfs.core.windows.net/paysim
+      checkpoint_root: abfss://checkpoints@storageaccount.dfs.core.windows.net/fraud-detection-prod
+    compute:
+      job_cluster_key: fraud_detection_prod_cluster
+
+resources:
+  jobs:
+    fraud_detection_bronze:
+      name: "[${bundle.target}] Bronze Ingestion"
+      schedule:
+        quartz_cron_expression: "0 */10 * ? * *"
+        timezone_id: UTC
+      tasks:
+        - task_key: bronze_ingest
+          pipeline_key: fraud_detection_dlt
+          refresh_selection:
+            tables:
+              - fraud_detection_dev.bronze.transactions_raw
+
+    fraud_detection_dlt:
+      name: "[${bundle.target}] Medallion DLT Pipeline"
+      pipeline:
+        key: fraud_detection_medallion
+        target: ${bundle.target}
+        libraries:
+          - notebook:
+              path: src/pipelines/bronze_pipeline.py
+          - notebook:
+              path: src/pipelines/silver_pipeline.py
+          - notebook:
+              path: src/pipelines/gold_pipeline.py
+        configuration:
+          pipeline.source_path: ${source_path}
+          pipeline.checkpoint_path: ${checkpoint_root}
+
+    fraud_detection_gold:
+      name: "[${bundle.target}] Gold Aggregation"
+      schedule:
+        quartz_cron_expression: "0 0 * ? * *"
+        timezone_id: UTC
+      tasks:
+        - task_key: gold_refresh
+          pipeline_key: fraud_detection_dlt
+          refresh_selection:
+            tables:
+              - fraud_detection_dev.gold.fraud_velocity_metrics
+              - fraud_detection_dev.gold.daily_fraud_report
+
+  pipelines:
+    fraud_detection_medallion:
+      name: "Medallion Fraud Detection Pipeline"
+      development: true
+      photon: true
+      serverless: false
+      channel: CURRENT
+      edition: advanced
+      catalog: ${catalog}
+      storage: ${checkpoint_root}
+      configuration:
+        pipeline.source_path: ${source_path}
+        pipeline.checkpoint_path: ${checkpoint_root}
+
+  job_clusters:
+    fraud_detection_prod_cluster:
+      new_cluster:
+        spark_version: 15.4.x-scala2.12
+        node_type_id: i3.xlarge
+        num_workers: 4
+        data_security_mode: SINGLE_USER
+        runtime_engine: STANDARD
+        spark_conf:
+          spark.sql.extensions: io.delta.sql.DeltaSparkSessionExtension
+          spark.sql.catalog.spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+          spark.databricks.delta.schema.autoMerge.enabled: "true"
+          spark.databricks.delta.autoCompact.enabled: "true"
+          spark.databricks.delta.optimizeWrite.enabled: "true"

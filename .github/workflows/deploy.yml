@@ -1,0 +1,36 @@
+name: Deploy to Databricks
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "Deployment target (dev, staging, prod)"
+        required: true
+        type: string
+      databricks_host:
+        description: "Databricks workspace URL"
+        required: true
+        type: string
+      databricks_token:
+        description: "Databricks personal access token"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Databricks CLI
+        run: pip install databricks-cli
+      - name: Authenticate
+        run: |
+          databricks configure --host "${{ inputs.databricks_host }}" --token "${{ inputs.databricks_token }}"
+        env:
+          DATABRICKS_HOST: ${{ inputs.databricks_host }}
+          DATABRICKS_TOKEN: ${{ inputs.databricks_token }}
+      - name: Deploy bundle
+        run: databricks bundle deploy --target ${{ inputs.target }}

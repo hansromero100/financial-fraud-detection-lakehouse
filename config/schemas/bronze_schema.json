@@ -1,0 +1,71 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "step",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {"description": "Time step in hours from the start of simulation (1-743)"}
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "nullable": true,
+      "metadata": {"description": "Transaction type: CASH_IN, CASH_OUT, DEBIT, PAYMENT, TRANSFER"}
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "nullable": true,
+      "metadata": {"description": "Amount of the transaction in local currency"}
+    },
+    {
+      "name": "nameOrig",
+      "type": "string",
+      "nullable": true,
+      "metadata": {"description": "Customer who initiated the transaction"}
+    },
+    {
+      "name": "oldbalanceOrg",
+      "type": "double",
+      "nullable": true,
+      "metadata": {"description": "Initial balance before the transaction (origin)"}
+    },
+    {
+      "name": "newbalanceOrig",
+      "type": "double",
+      "nullable": true,
+      "metadata": {"description": "New balance after the transaction (origin)"}
+    },
+    {
+      "name": "nameDest",
+      "type": "string",
+      "nullable": true,
+      "metadata": {"description": "Recipient customer of the transaction"}
+    },
+    {
+      "name": "oldbalanceDest",
+      "type": "double",
+      "nullable": true,
+      "metadata": {"description": "Initial balance before the transaction (destination)"}
+    },
+    {
+      "name": "newbalanceDest",
+      "type": "double",
+      "nullable": true,
+      "metadata": {"description": "New balance after the transaction (destination)"}
+    },
+    {
+      "name": "isFraud",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {"description": "1 if fraudulent, 0 if legitimate"}
+    },
+    {
+      "name": "isFlaggedFraud",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {"description": "1 if flagged by the bank's fraud detection system"}
+    }
+  ]
+}
