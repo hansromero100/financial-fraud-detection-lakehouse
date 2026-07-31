@@ -1,0 +1,48 @@
+environment: prod
+
+databricks:
+  host: https://prod-XXXXXXXXX.cloud.databricks.com
+  workspace_id: "0000000000000000"
+  cluster_id: "0000-000000-xxxxxxxx"
+
+catalog:
+  name: fraud_detection_prod
+  schema_bronze: bronze
+  schema_silver: silver
+  schema_gold: gold
+
+unity_catalog:
+  enabled: true
+  storage_credential: prod_storage_credential
+  external_location: abfss://prod-data@storageaccount.dfs.core.windows.net/fraud-detection
+
+streaming:
+  source_path: abfss://raw-landing@storageaccount.dfs.core.windows.net/paysim
+  checkpoint_path: abfss://checkpoints@storageaccount.dfs.core.windows.net/fraud-detection-prod
+  max_files_per_trigger: 10
+  trigger_interval: once
+  file_format: csv
+  header: true
+
+pipelines:
+  bronze:
+    table: fraud_detection_prod.bronze.transactions_raw
+    schema_location: config/schemas/bronze_schema.json
+  silver:
+    table: fraud_detection_prod.silver.transactions_clean
+    expectations_file: src/quality/expectations_silver.yaml
+  gold:
+    table: fraud_detection_prod.gold.fraud_velocity_metrics
+    table_reporting: fraud_detection_prod.gold.daily_fraud_report
+    liquid_cluster_by:
+      - transaction_type
+      - transaction_date
+
+quality:
+  high_value_threshold: 10000.0
+  velocity_window_hours: 1
+  fraud_score_threshold: 0.8
+
+logging:
+  level: WARNING
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -1,0 +1,48 @@
+expectations:
+  - name: valid_amount
+    description: "Transaction amount must be strictly greater than zero"
+    type: expect
+    condition: "amount > 0"
+    on_violation: warn
+
+  - name: valid_transaction_type
+    description: "Transaction type must be one of the 5 valid PaySim types"
+    type: expect
+    condition: "type IN ('CASH_IN','CASH_OUT','DEBIT','PAYMENT','TRANSFER')"
+    on_violation: warn
+
+  - name: non_null_origin
+    description: "Origin account ID must not be null"
+    type: expect_or_drop
+    condition: "nameOrig IS NOT NULL"
+    on_violation: drop
+
+  - name: non_null_destination
+    description: "Destination account ID must not be null"
+    type: expect_or_drop
+    condition: "nameDest IS NOT NULL"
+    on_violation: drop
+
+  - name: valid_fraud_flag
+    description: "isFraud must be 0 or 1"
+    type: expect_or_fail
+    condition: "isFraud IN (0, 1)"
+    on_violation: fail
+
+  - name: valid_flagged_fraud
+    description: "isFlaggedFraud must be 0 or 1"
+    type: expect_or_drop
+    condition: "isFlaggedFraud IN (0, 1)"
+    on_violation: drop
+
+  - name: valid_balance_non_negative
+    description: "Balances should be non-negative for legitimate transactions"
+    type: expect
+    condition: "newbalanceOrig >= 0 AND newbalanceDest >= 0"
+    on_violation: warn
+
+  - name: high_value_flag_consistency
+    description: "Transactions over 200k in TRANSFER/CASH_OUT should be flagged"
+    type: expect
+    condition: "NOT (amount > 200000 AND type IN ('TRANSFER','CASH_OUT') AND isFlaggedFraud = 0)"
+    on_violation: warn

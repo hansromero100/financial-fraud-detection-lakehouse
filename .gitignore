@@ -216,3 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Databricks
+.databricks/
+databricks.yml.local
+state.yml
+
+# Data files (keep sample, ignore raw)
+data/raw/
+*.parquet
+
+# IDE
+.idea/
+.vscode/
